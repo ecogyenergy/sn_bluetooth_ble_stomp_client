@@ -1,3 +1,5 @@
+library sn_bluetooth_ble_stomp_client;
+
 /// Possible message status responses from the server.
 enum SnBluetoothBleStompClientMessageStatus {
   ok,

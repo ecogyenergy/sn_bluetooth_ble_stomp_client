@@ -1,3 +1,5 @@
+library sn_bluetooth_ble_stomp_client;
+
 /// The commands found in the SolarNetwork STOMP server.
 enum SnBluetoothBleStompClientFrameCommand {
   abort,

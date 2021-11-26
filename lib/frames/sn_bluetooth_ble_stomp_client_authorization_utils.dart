@@ -1,3 +1,5 @@
+library sn_bluetooth_ble_stomp_client;
+
 import 'dart:convert';
 import 'dart:typed_data';
 
