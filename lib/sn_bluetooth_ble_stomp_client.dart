@@ -20,10 +20,12 @@ class SnBluetoothBleStompClient extends BluetoothBleStompClient {
       {required BluetoothCharacteristic writeCharacteristic,
       required BluetoothCharacteristic readCharacteristic,
       required this.login,
-      required this.password})
+      required this.password,
+      Duration? actionDelay})
       : super(
             writeCharacteristic: writeCharacteristic,
-            readCharacteristic: readCharacteristic);
+            readCharacteristic: readCharacteristic,
+            actionDelay: actionDelay);
 
   final String login;
   final String password;
