@@ -1,7 +1,5 @@
 library sn_bluetooth_ble_stomp_client;
 
-import 'dart:convert';
-
 import 'package:bluetooth_ble_stomp_client/bluetooth_ble_stomp_client.dart';
 import 'package:bluetooth_ble_stomp_client/bluetooth_ble_stomp_client_frame.dart';
 import 'package:flutter_blue/flutter_blue.dart';
@@ -16,26 +14,29 @@ class SnBluetoothBleStompClient extends BluetoothBleStompClient {
   static const String internetAccessDestination = '/setup/internet/access';
   static const String pingDestination = '/setup/network/ping';
 
-  SnBluetoothBleStompClient(
-      {required BluetoothCharacteristic writeCharacteristic,
-      required BluetoothCharacteristic readCharacteristic,
-      required this.login,
-      required this.password,
-      Duration? actionDelay})
-      : super(
-            writeCharacteristic: writeCharacteristic,
-            readCharacteristic: readCharacteristic,
-            actionDelay: actionDelay);
+  SnBluetoothBleStompClient({
+    required BluetoothCharacteristic writeCharacteristic,
+    required BluetoothCharacteristic readCharacteristic,
+    Duration? actionDelay,
+    int? consecutiveAttempts,
+    required this.login,
+    required this.password,
+    required this.host,
+  }) : super(
+      writeCharacteristic: writeCharacteristic,
+      readCharacteristic: readCharacteristic,
+      actionDelay: actionDelay,
+      consecutiveAttempts: consecutiveAttempts);
 
   final String login;
   final String password;
+  final String host;
 
   late String session;
-
   int _latestId = 0;
   int _latestRequestId = 0;
 
-  String? latestDatum;
+  bool authenticated = false;
 
   /// Get the latest ID and increment it.
   String _getId() {
@@ -52,75 +53,65 @@ class SnBluetoothBleStompClient extends BluetoothBleStompClient {
   }
 
   /// Connect to the the server.
-  void connect({required String host, String? acceptVersion = '1.2'}) {
-    send(
-        command: SnBluetoothBleStompClientFrameCommand.connect.value,
-        headers: {
-          'accept-version': acceptVersion!,
-          'host': host,
-          'login': login,
-        },
-        callback: () => _authenticate());
+  Future<void> connect({String? acceptVersion = '1.2'}) async {
+    await send(
+      command: SnBluetoothBleStompClientFrameCommand.connect.value,
+      headers: {
+        'accept-version': acceptVersion!,
+        'host': host,
+        'login': login,
+      },
+    );
+
+    /// Evaluate the response.
+    BluetoothBleStompClientFrame response =
+    BluetoothBleStompClientFrame.fromBytes(bytes: await read());
+    switch (response.command) {
+
+    /// If a CONNECTED command is sent back, then attempt to authenticate.
+      case 'CONNECTED':
+        session = response.headers['session']!;
+
+        String authHashParamSalt = response.headers['auth-hash-param-salt']!;
+        await _authenticate(authHashParamSalt, DateTime.now().toUtc());
+    }
   }
 
-  Future<void> _authenticate() async {
-    /// Get the data.
-    String readData = utf8.decode(await readCharacteristic.read());
-    BluetoothBleStompClientFrame readFrame =
-        BluetoothBleStompClientFrame.fromString(str: readData);
-
-    /// Check the command. If it is CONNECTED, then continue.
-    if (readFrame.command ==
-        SnBluetoothBleStompClientFrameCommand.connected.value) {
-      session = readFrame.headers['session']!;
-      String authHash = readFrame.headers['auth-hash']!;
-      String authHashParamSalt = readFrame.headers['auth-hash-param-salt']!;
-
-      /// Encrypt using bcrypt.
-      if (authHash == 'bcrypt') {
-        /// Send an authenticate frame.
-        sendFrame(
-            frame: SnBluetoothBleStompClientAuthenticateFrame(
-                password: password,
-                salt: authHashParamSalt,
-                login: login,
-                date: DateTime.now().toUtc()),
-            callback: () {});
-        subscribe(destination: setupDestination);
-      }
+  /// Authenticate to the server.
+  Future<void> _authenticate(String salt, DateTime date) async {
+    await sendFrame(
+        frame: SnBluetoothBleStompClientAuthenticateFrame(
+            password: password, salt: salt, login: login, date: date));
+    /// If the next read is a null, then assume that authentication was
+    /// successful.
+    if (await nullRead() == true) {
+      authenticated = true;
     }
-    // sendFrame(frame: SnBluetoothBleStompClientAuthenticateFrame(password: password, salt: salt, login: login, date: date))
   }
 
   /// Subscribe to a destination topic with the given id.
-  Future<void> subscribe(
-      {required String destination,
-      Function? callback,
-      Duration? delay}) async {
-    sendFrame(
+  Future<void> subscribe({required String destination, Duration? delay}) async {
+    await sendFrame(
         frame: SnBluetoothBleStompClientSubscribeFrame(
             destination: destination, id: _getId()),
-        callback: callback,
         delay: delay);
   }
 
   /// Get the latest datum of the node.
-  Future<void> getLatestDatum(Function? callback, Duration? delay) async {
-    sendFrame(
+  Future<void> getLatestDatum({Duration? delay}) async {
+    await sendFrame(
         frame: SnBluetoothBleStompClientSendFrame(headers: {
           'destination': latestDatumDestination,
           'request-id': _getRequestId()
         }),
-        callback: callback,
         delay: delay);
   }
 
   /// Get the status of internet access.
-  Future<void> getInternetAccess(Function? callback, Duration? delay) async {
-    sendFrame(
+  Future<void> getInternetAccess({Duration? delay}) async {
+    await sendFrame(
         frame: SnBluetoothBleStompClientSendFrame(
             headers: {'destination': pingDestination}),
-        callback: callback,
         delay: delay);
   }
 }
