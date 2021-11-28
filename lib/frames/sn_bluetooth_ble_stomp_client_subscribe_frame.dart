@@ -6,12 +6,11 @@ import 'package:sn_bluetooth_ble_stomp_client/sn_bluetooth_ble_stomp_client_fram
 /// Create a subscribe frame to subscribe to a given topic.
 class SnBluetoothBleStompClientSubscribeFrame
     extends BluetoothBleStompClientFrame {
-
   SnBluetoothBleStompClientSubscribeFrame(
       {required this.destination, required this.id})
       : super(
-      command: SnBluetoothBleStompClientFrameCommand.subscribe.value,
-      headers: {'id': id, 'destination': destination});
+            command: SnBluetoothBleStompClientFrameCommand.subscribe.value,
+            headers: {'id': id, 'destination': destination});
 
   final String destination;
   final String id;

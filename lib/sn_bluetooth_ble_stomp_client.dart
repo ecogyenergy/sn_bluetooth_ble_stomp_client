@@ -9,6 +9,8 @@ import 'package:sn_bluetooth_ble_stomp_client/frames/sn_bluetooth_ble_stomp_clie
 import 'package:sn_bluetooth_ble_stomp_client/frames/sn_bluetooth_ble_stomp_client_subscribe_frame.dart';
 import 'package:sn_bluetooth_ble_stomp_client/sn_bluetooth_ble_stomp_client_frame_command.dart';
 
+/// A simple SolarNetwork specific BLE STOMP client that uses
+/// bluetooth_ble_stomp_client.
 class SnBluetoothBleStompClient extends BluetoothBleStompClient {
   static const String setupDestination = '/setup/**';
   static const String latestDatumDestination = '/setup/datum/latest';
@@ -18,7 +20,7 @@ class SnBluetoothBleStompClient extends BluetoothBleStompClient {
   SnBluetoothBleStompClient({
     required BluetoothCharacteristic writeCharacteristic,
     required BluetoothCharacteristic readCharacteristic,
-    Duration? actionDelay,
+    Duration? actionDelay = const Duration(seconds: 1, milliseconds: 200),
     int? consecutiveAttempts,
     required this.login,
     required this.password,
