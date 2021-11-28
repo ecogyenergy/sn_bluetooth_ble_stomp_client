@@ -68,15 +68,15 @@ class SnBluetoothBleStompClient extends BluetoothBleStompClient {
     /// Evaluate the response.
     BluetoothBleStompClientFrame response =
         BluetoothBleStompClientFrame.fromBytes(bytes: await read());
-    switch (response.command) {
 
-      /// If a CONNECTED command is sent back, then attempt to authenticate.
-      case 'CONNECTED':
-        session = response.headers['session']!;
+    /// If a CONNECTED command is sent back, then attempt to authenticate.
+    if (response.command ==
+        SnBluetoothBleStompClientFrameCommand.connected.value) {
+      session = response.headers['session']!;
 
-        String authHashParamSalt = response.headers['auth-hash-param-salt']!;
-        await _authenticate(
-            salt: authHashParamSalt, date: DateTime.now().toUtc());
+      String authHashParamSalt = response.headers['auth-hash-param-salt']!;
+      await _authenticate(
+          salt: authHashParamSalt, date: DateTime.now().toUtc());
     }
   }
 
@@ -96,7 +96,7 @@ class SnBluetoothBleStompClient extends BluetoothBleStompClient {
     /// successful.
     if (await nullRead() == true) {
       authenticated = true;
-      await subscribe(destination: '/setup/**');
+      await subscribe(destination: setupDestination);
     }
   }
 
