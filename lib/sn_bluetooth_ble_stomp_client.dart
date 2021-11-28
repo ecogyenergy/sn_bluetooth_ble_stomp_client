@@ -23,10 +23,10 @@ class SnBluetoothBleStompClient extends BluetoothBleStompClient {
     required this.password,
     required this.host,
   }) : super(
-      writeCharacteristic: writeCharacteristic,
-      readCharacteristic: readCharacteristic,
-      actionDelay: actionDelay,
-      consecutiveAttempts: consecutiveAttempts);
+            writeCharacteristic: writeCharacteristic,
+            readCharacteristic: readCharacteristic,
+            actionDelay: actionDelay,
+            consecutiveAttempts: consecutiveAttempts);
 
   final String login;
   final String password;
@@ -53,65 +53,80 @@ class SnBluetoothBleStompClient extends BluetoothBleStompClient {
   }
 
   /// Connect to the the server.
-  Future<void> connect({String? acceptVersion = '1.2'}) async {
+  Future<void> connect(
+      {String? acceptVersion = '1.2', Duration? delay, int? attempts}) async {
     await send(
-      command: SnBluetoothBleStompClientFrameCommand.connect.value,
-      headers: {
-        'accept-version': acceptVersion!,
-        'host': host,
-        'login': login,
-      },
-    );
+        command: SnBluetoothBleStompClientFrameCommand.connect.value,
+        headers: {
+          'accept-version': acceptVersion!,
+          'host': host,
+          'login': login,
+        },
+        delay: delay,
+        attempts: attempts);
 
     /// Evaluate the response.
     BluetoothBleStompClientFrame response =
-    BluetoothBleStompClientFrame.fromBytes(bytes: await read());
+        BluetoothBleStompClientFrame.fromBytes(bytes: await read());
     switch (response.command) {
 
-    /// If a CONNECTED command is sent back, then attempt to authenticate.
+      /// If a CONNECTED command is sent back, then attempt to authenticate.
       case 'CONNECTED':
         session = response.headers['session']!;
 
         String authHashParamSalt = response.headers['auth-hash-param-salt']!;
-        await _authenticate(authHashParamSalt, DateTime.now().toUtc());
+        await _authenticate(
+            salt: authHashParamSalt, date: DateTime.now().toUtc());
     }
   }
 
   /// Authenticate to the server.
-  Future<void> _authenticate(String salt, DateTime date) async {
+  Future<void> _authenticate(
+      {required String salt,
+      required DateTime date,
+      Duration? delay,
+      int? attempts}) async {
     await sendFrame(
         frame: SnBluetoothBleStompClientAuthenticateFrame(
-            password: password, salt: salt, login: login, date: date));
+            password: password, salt: salt, login: login, date: date),
+        delay: delay,
+        attempts: attempts);
+
     /// If the next read is a null, then assume that authentication was
     /// successful.
     if (await nullRead() == true) {
       authenticated = true;
+      await subscribe(destination: '/setup/**');
     }
   }
 
   /// Subscribe to a destination topic with the given id.
-  Future<void> subscribe({required String destination, Duration? delay}) async {
+  Future<void> subscribe(
+      {required String destination, Duration? delay, int? attempts}) async {
     await sendFrame(
         frame: SnBluetoothBleStompClientSubscribeFrame(
             destination: destination, id: _getId()),
-        delay: delay);
+        delay: delay,
+        attempts: attempts);
   }
 
   /// Get the latest datum of the node.
-  Future<void> getLatestDatum({Duration? delay}) async {
+  Future<void> getLatestDatum({Duration? delay, int? attempts}) async {
     await sendFrame(
         frame: SnBluetoothBleStompClientSendFrame(headers: {
           'destination': latestDatumDestination,
           'request-id': _getRequestId()
         }),
-        delay: delay);
+        delay: delay,
+        attempts: attempts);
   }
 
   /// Get the status of internet access.
-  Future<void> getInternetAccess({Duration? delay}) async {
+  Future<void> getInternetAccess({Duration? delay, int? attempts}) async {
     await sendFrame(
         frame: SnBluetoothBleStompClientSendFrame(
             headers: {'destination': pingDestination}),
-        delay: delay);
+        delay: delay,
+        attempts: attempts);
   }
 }
