@@ -1,5 +1,5 @@
 name: sn_bluetooth_ble_stomp_client
-description: A new Flutter package project.
+description: A simple SolarNetwork specific BLE STOMP client that uses bluetooth_ble_stomp_client.
 version: 0.0.1
 homepage:
 
@@ -10,6 +10,12 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  crypto: ^3.0.1
+  hex: ^0.2.0
+  intl: ^0.17.0
+  dbcrypt: ^2.0.0
+  bluetooth_ble_stomp_client:
+    path: ../bluetooth_ble_stomp_client
 
 dev_dependencies:
   flutter_test:
