@@ -2,6 +2,7 @@ library sn_bluetooth_ble_stomp_client;
 
 import 'package:bluetooth_ble_stomp_client/bluetooth_ble_stomp_client.dart';
 import 'package:bluetooth_ble_stomp_client/bluetooth_ble_stomp_client_frame.dart';
+import 'package:bluetooth_ble_stomp_client/bluetooth_ble_stomp_client_response_exception.dart';
 import 'package:flutter_blue/flutter_blue.dart';
 import 'package:sn_bluetooth_ble_stomp_client/frames/sn_bluetooth_ble_stomp_client_authenticate_frame.dart';
 import 'package:sn_bluetooth_ble_stomp_client/frames/sn_bluetooth_ble_stomp_client_send_frame.dart';
@@ -66,8 +67,12 @@ class SnBluetoothBleStompClient extends BluetoothBleStompClient {
         attempts: attempts);
 
     /// Evaluate the response.
-    BluetoothBleStompClientFrame response =
-        BluetoothBleStompClientFrame.fromBytes(bytes: await read());
+    BluetoothBleStompClientFrame response;
+    try {
+      response = BluetoothBleStompClientFrame.fromBytes(bytes: await read());
+    } on BluetoothBleStompClientResponseException {
+      return;
+    }
 
     /// If a CONNECTED command is sent back, then attempt to authenticate.
     if (response.command ==
@@ -111,7 +116,7 @@ class SnBluetoothBleStompClient extends BluetoothBleStompClient {
   }
 
   /// Get the latest datum of the node.
-  Future<void> getLatestDatum({Duration? delay, int? attempts}) async {
+  Future<String?> getLatestDatum({Duration? delay, int? attempts}) async {
     await sendFrame(
         frame: SnBluetoothBleStompClientSendFrame(headers: {
           'destination': latestDatumDestination,
@@ -119,14 +124,34 @@ class SnBluetoothBleStompClient extends BluetoothBleStompClient {
         }),
         delay: delay,
         attempts: attempts);
+
+    BluetoothBleStompClientFrame response;
+    try {
+      response = BluetoothBleStompClientFrame.fromBytes(bytes: await read());
+      return response.body;
+    } on BluetoothBleStompClientResponseException {
+      return null;
+    }
   }
 
   /// Get the status of internet access.
-  Future<void> getInternetAccess({Duration? delay, int? attempts}) async {
+  Future<bool?> getInternetAccess({Duration? delay, int? attempts}) async {
     await sendFrame(
         frame: SnBluetoothBleStompClientSendFrame(
             headers: {'destination': pingDestination}),
         delay: delay,
         attempts: attempts);
+
+    BluetoothBleStompClientFrame response;
+    try {
+      response = BluetoothBleStompClientFrame.fromBytes(bytes: await read());
+      if (response.body != null && response.body == '\u0000') {
+        return true;
+      } else {
+        return false;
+      }
+    } on BluetoothBleStompClientResponseException {
+      return null;
+    }
   }
 }

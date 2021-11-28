@@ -15,9 +15,7 @@ dependencies:
   intl: ^0.17.0
   dbcrypt: ^2.0.0
   bluetooth_ble_stomp_client:
-    git:
-      url: https://github.com/elijahjpassmore/bluetooth_ble_stomp_client.git
-      ref: main
+    path: ../bluetooth_ble_stomp_client
 
 dev_dependencies:
   flutter_test:
