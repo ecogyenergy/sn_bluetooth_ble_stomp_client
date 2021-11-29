@@ -20,7 +20,7 @@ class SnBluetoothBleStompClient extends BluetoothBleStompClient {
   SnBluetoothBleStompClient({
     required BluetoothCharacteristic writeCharacteristic,
     required BluetoothCharacteristic readCharacteristic,
-    Duration? actionDelay = const Duration(seconds: 1, milliseconds: 200),
+    Duration? actionDelay = const Duration(seconds: 1),
     int? consecutiveAttempts,
     required this.login,
     required this.password,
@@ -40,6 +40,7 @@ class SnBluetoothBleStompClient extends BluetoothBleStompClient {
   int _latestRequestId = 0;
 
   bool authenticated = false;
+  bool waiting = false;
 
   /// Get the latest ID and increment it.
   String _getId() {
@@ -73,8 +74,12 @@ class SnBluetoothBleStompClient extends BluetoothBleStompClient {
     try {
       response = BluetoothBleStompClientFrame.fromBytes(bytes: await read());
     } on BluetoothBleStompClientResponseException {
+      /// If a frame cannot be made of the response, then assume that the server
+      /// is currently starting.
+      waiting = true;
       return;
     }
+    waiting = false;
 
     /// If a CONNECTED command is sent back, then attempt to authenticate.
     if (response.command ==
