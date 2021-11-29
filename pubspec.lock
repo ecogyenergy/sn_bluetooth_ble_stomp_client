@@ -11,9 +11,11 @@ packages:
   bluetooth_ble_stomp_client:
     dependency: "direct main"
     description:
-      path: "../bluetooth_ble_stomp_client"
-      relative: true
-    source: path
+      path: "."
+      ref: main
+      resolved-ref: "50013c64c113f968111da5aa4df68217b890be8e"
+      url: "https://github.com/elijahjpassmore/bluetooth_ble_stomp_client.git"
+    source: git
     version: "0.0.1"
   boolean_selector:
     dependency: transitive
