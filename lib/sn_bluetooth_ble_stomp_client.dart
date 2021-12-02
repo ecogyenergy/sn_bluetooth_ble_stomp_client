@@ -8,6 +8,7 @@ import 'package:sn_bluetooth_ble_stomp_client/frames/sn_bluetooth_ble_stomp_clie
 import 'package:sn_bluetooth_ble_stomp_client/frames/sn_bluetooth_ble_stomp_client_send_frame.dart';
 import 'package:sn_bluetooth_ble_stomp_client/frames/sn_bluetooth_ble_stomp_client_subscribe_frame.dart';
 import 'package:sn_bluetooth_ble_stomp_client/sn_bluetooth_ble_stomp_client_frame_command.dart';
+import 'package:sn_bluetooth_ble_stomp_client/sn_bluetooth_ble_stomp_client_message_status.dart';
 
 /// A simple SolarNetwork specific BLE STOMP client that uses
 /// bluetooth_ble_stomp_client.
@@ -135,8 +136,11 @@ class SnBluetoothBleStompClient extends BluetoothBleStompClient {
     BluetoothBleStompClientFrame response;
     try {
       response = BluetoothBleStompClientFrame.fromBytes(bytes: await read());
-      return response.body;
-    } on BluetoothBleStompClientResponseException {
+      if (response.headers['status']! ==
+          SnBluetoothBleStompClientMessageStatus.ok.value) {
+        return response.body;
+      }
+    } catch (e) {
       return null;
     }
   }
@@ -152,13 +156,16 @@ class SnBluetoothBleStompClient extends BluetoothBleStompClient {
     BluetoothBleStompClientFrame response;
     try {
       response = BluetoothBleStompClientFrame.fromBytes(bytes: await read());
-      if (response.body != null && response.body == '\u0000') {
+      if ((response.headers['status']! ==
+              SnBluetoothBleStompClientMessageStatus.ok.value) &&
+          response.body != null &&
+          response.body == '\u0000') {
         return true;
-      } else {
-        return false;
       }
-    } on BluetoothBleStompClientResponseException {
-      return null;
+    } catch (e) {
+      return false;
     }
+
+    return false;
   }
 }
