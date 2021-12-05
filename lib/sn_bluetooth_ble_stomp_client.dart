@@ -94,6 +94,8 @@ class SnBluetoothBleStompClient extends BluetoothBleStompClient {
   }
 
   /// Authenticate to the server.
+  ///
+  /// NOTE: Only the BCrypt digest algorithm is supported.
   Future<void> _authenticate(
       {required String salt,
       required DateTime date,
@@ -125,12 +127,12 @@ class SnBluetoothBleStompClient extends BluetoothBleStompClient {
 
   /// Get the latest datum of the node.
   ///
-  /// NOTE: This will return a successful request, but that doesn't mean
-  /// that the latest datum is "correct".
+  /// NOTE: A successful request does not mean that the latest datum is correct
+  /// or as the user may expect.
   ///
   /// For example, this can result in an empty body of "[]". This is an
-  /// expected result, so it is returned as not null, but it might not
-  /// be what you're after.
+  /// expected result from the server's perspective, so it is returned as not
+  /// null, but it might not be what the user expects.
   Future<String?> getLatestDatum({Duration? delay, int? attempts}) async {
     await sendFrame(
         frame: SnBluetoothBleStompClientSendFrame(headers: {
@@ -153,6 +155,14 @@ class SnBluetoothBleStompClient extends BluetoothBleStompClient {
   }
 
   /// Get the status of internet access.
+  ///
+  /// If there is no provided serviceName, then the destination will be sent to:
+  ///
+  ///   /setup/network/ping
+  ///
+  /// Providing serviceName results in the destination:
+  ///
+  ///   /setup/network/ping/serviceName
   Future<bool?> getInternetAccess(
       {Duration? delay, int? attempts, String? serviceName}) async {
     await sendFrame(
