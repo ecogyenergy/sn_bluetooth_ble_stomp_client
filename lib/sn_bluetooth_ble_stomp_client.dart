@@ -153,10 +153,14 @@ class SnBluetoothBleStompClient extends BluetoothBleStompClient {
   }
 
   /// Get the status of internet access.
-  Future<bool?> getInternetAccess({Duration? delay, int? attempts}) async {
+  Future<bool?> getInternetAccess(
+      {Duration? delay, int? attempts, String? serviceName}) async {
     await sendFrame(
-        frame: SnBluetoothBleStompClientSendFrame(
-            headers: {'destination': pingDestination}),
+        frame: SnBluetoothBleStompClientSendFrame(headers: {
+          'destination': serviceName == null
+              ? pingDestination
+              : pingDestination + '/$serviceName'
+        }),
         delay: delay,
         attempts: attempts);
 
