@@ -145,7 +145,7 @@ class SnBluetoothBleStompClient extends BluetoothBleStompClient {
       response = BluetoothBleStompClientFrame.fromBytes(bytes: await read());
       if (response.headers['status']! ==
           SnBluetoothBleStompClientMessageStatus.ok.value) {
-        return response.body;
+        return response.bodyReadable;
       }
     } catch (e) {
       return null;

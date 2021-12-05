@@ -13,7 +13,7 @@ packages:
     description:
       path: "."
       ref: main
-      resolved-ref: "50013c64c113f968111da5aa4df68217b890be8e"
+      resolved-ref: b3da477f7a0e3dbd263b5f304f5cef443a3bba88
       url: "https://github.com/elijahjpassmore/bluetooth_ble_stomp_client.git"
     source: git
     version: "0.0.1"
