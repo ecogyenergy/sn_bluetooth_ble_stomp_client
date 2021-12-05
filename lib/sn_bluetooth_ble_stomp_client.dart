@@ -124,6 +124,13 @@ class SnBluetoothBleStompClient extends BluetoothBleStompClient {
   }
 
   /// Get the latest datum of the node.
+  ///
+  /// NOTE: This will return a successful request, but that doesn't mean
+  /// that the latest datum is "correct".
+  ///
+  /// For example, this can result in an empty body of "[]". This is an
+  /// expected result, so it is returned as not null, but it might not
+  /// be what you're after.
   Future<String?> getLatestDatum({Duration? delay, int? attempts}) async {
     await sendFrame(
         frame: SnBluetoothBleStompClientSendFrame(headers: {
