@@ -22,12 +22,14 @@ class SnBluetoothBleStompClient extends BluetoothBleStompClient {
     required QualifiedCharacteristic readCharacteristic,
     required QualifiedCharacteristic writeCharacteristic,
     Duration? actionDelay = const Duration(seconds: 1),
+    void Function(String)? logMessage,
     required this.login,
     required this.password,
     required this.host,
   }) : super(
             writeCharacteristic: writeCharacteristic,
             readCharacteristic: readCharacteristic,
+            logMessage: logMessage,
             actionDelay: actionDelay);
 
   final String login;
@@ -77,8 +79,6 @@ class SnBluetoothBleStompClient extends BluetoothBleStompClient {
       return;
     }
     waiting = false;
-
-    print(response.result);
 
     /// If a CONNECTED command is sent back, then attempt to authenticate.
     if (response.command ==
