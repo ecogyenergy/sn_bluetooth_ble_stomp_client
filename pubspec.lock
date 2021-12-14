@@ -12,8 +12,8 @@ packages:
     dependency: "direct main"
     description:
       path: "."
-      ref: develop
-      resolved-ref: "1644a6a469e9f59cc49d1c9a4157cc244a4b2fa7"
+      ref: main
+      resolved-ref: "4814a91daa06b85dd441743df8e3c68f88e5a589"
       url: "https://github.com/elijahjpassmore/bluetooth_ble_stomp_client.git"
     source: git
     version: "0.0.1"
