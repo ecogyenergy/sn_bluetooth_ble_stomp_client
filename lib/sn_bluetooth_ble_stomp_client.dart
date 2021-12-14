@@ -21,7 +21,7 @@ class SnBluetoothBleStompClient extends BluetoothBleStompClient {
   SnBluetoothBleStompClient({
     required QualifiedCharacteristic readCharacteristic,
     required QualifiedCharacteristic writeCharacteristic,
-    Duration? actionDelay = const Duration(seconds: 1),
+    Duration? actionDelay = const Duration(milliseconds: 500),
     void Function(String)? logMessage,
     required this.login,
     required this.password,
