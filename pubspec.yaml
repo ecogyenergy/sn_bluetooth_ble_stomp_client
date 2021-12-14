@@ -18,6 +18,7 @@ dependencies:
     git:
       url: https://github.com/elijahjpassmore/bluetooth_ble_stomp_client.git
       ref: main
+  flutter_reactive_ble: ^5.0.2
 
 dev_dependencies:
   flutter_test:

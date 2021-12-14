@@ -3,7 +3,7 @@ library sn_bluetooth_ble_stomp_client;
 import 'package:bluetooth_ble_stomp_client/bluetooth_ble_stomp_client.dart';
 import 'package:bluetooth_ble_stomp_client/bluetooth_ble_stomp_client_frame.dart';
 import 'package:bluetooth_ble_stomp_client/bluetooth_ble_stomp_client_response_exception.dart';
-import 'package:flutter_blue/flutter_blue.dart';
+import 'package:flutter_reactive_ble/flutter_reactive_ble.dart';
 import 'package:sn_bluetooth_ble_stomp_client/frames/sn_bluetooth_ble_stomp_client_authenticate_frame.dart';
 import 'package:sn_bluetooth_ble_stomp_client/frames/sn_bluetooth_ble_stomp_client_send_frame.dart';
 import 'package:sn_bluetooth_ble_stomp_client/frames/sn_bluetooth_ble_stomp_client_subscribe_frame.dart';
@@ -19,18 +19,18 @@ class SnBluetoothBleStompClient extends BluetoothBleStompClient {
   static const String pingDestination = '/setup/network/ping';
 
   SnBluetoothBleStompClient({
-    required BluetoothCharacteristic writeCharacteristic,
-    required BluetoothCharacteristic readCharacteristic,
-    Duration? actionDelay = const Duration(seconds: 1),
-    int? consecutiveAttempts,
+    required QualifiedCharacteristic readCharacteristic,
+    required QualifiedCharacteristic writeCharacteristic,
+    Duration? actionDelay = const Duration(milliseconds: 500),
+    void Function(String)? logMessage,
     required this.login,
     required this.password,
     required this.host,
   }) : super(
             writeCharacteristic: writeCharacteristic,
             readCharacteristic: readCharacteristic,
-            actionDelay: actionDelay,
-            consecutiveAttempts: consecutiveAttempts);
+            logMessage: logMessage,
+            actionDelay: actionDelay);
 
   final String login;
   final String password;
@@ -58,8 +58,7 @@ class SnBluetoothBleStompClient extends BluetoothBleStompClient {
   }
 
   /// Connect to the the server.
-  Future<void> connect(
-      {String? acceptVersion = '1.2', Duration? delay, int? attempts}) async {
+  Future<void> connect({String? acceptVersion = '1.2', Duration? delay}) async {
     await send(
         command: SnBluetoothBleStompClientFrameCommand.connect.value,
         headers: {
@@ -67,8 +66,7 @@ class SnBluetoothBleStompClient extends BluetoothBleStompClient {
           'host': host,
           'login': login,
         },
-        delay: delay,
-        attempts: attempts);
+        delay: delay);
 
     /// Evaluate the response.
     BluetoothBleStompClientFrame response;
@@ -97,15 +95,11 @@ class SnBluetoothBleStompClient extends BluetoothBleStompClient {
   ///
   /// NOTE: Only the BCrypt digest algorithm is supported.
   Future<void> _authenticate(
-      {required String salt,
-      required DateTime date,
-      Duration? delay,
-      int? attempts}) async {
+      {required String salt, required DateTime date, Duration? delay}) async {
     await sendFrame(
         frame: SnBluetoothBleStompClientAuthenticateFrame(
             password: password, salt: salt, login: login, date: date),
-        delay: delay,
-        attempts: attempts);
+        delay: delay);
 
     /// If the next read is a null, then assume that authentication was
     /// successful.
@@ -116,13 +110,11 @@ class SnBluetoothBleStompClient extends BluetoothBleStompClient {
   }
 
   /// Subscribe to a destination topic with the given id.
-  Future<void> subscribe(
-      {required String destination, Duration? delay, int? attempts}) async {
+  Future<void> subscribe({required String destination, Duration? delay}) async {
     await sendFrame(
         frame: SnBluetoothBleStompClientSubscribeFrame(
             destination: destination, id: _getId()),
-        delay: delay,
-        attempts: attempts);
+        delay: delay);
   }
 
   /// Get the latest datum of the node.
@@ -133,14 +125,13 @@ class SnBluetoothBleStompClient extends BluetoothBleStompClient {
   /// For example, this can result in an empty body of "[]". This is an
   /// expected result from the server's perspective, so it is returned as not
   /// null, but it might not be what the user expects.
-  Future<String?> getLatestDatum({Duration? delay, int? attempts}) async {
+  Future<String?> getLatestDatum({Duration? delay}) async {
     await sendFrame(
         frame: SnBluetoothBleStompClientSendFrame(headers: {
           'destination': latestDatumDestination,
           'request-id': _getRequestId()
         }),
-        delay: delay,
-        attempts: attempts);
+        delay: delay);
 
     BluetoothBleStompClientFrame response;
     try {
@@ -164,15 +155,14 @@ class SnBluetoothBleStompClient extends BluetoothBleStompClient {
   ///
   ///   /setup/network/ping/serviceName
   Future<bool?> getInternetAccess(
-      {Duration? delay, int? attempts, String? serviceName}) async {
+      {Duration? delay, String? serviceName}) async {
     await sendFrame(
         frame: SnBluetoothBleStompClientSendFrame(headers: {
           'destination': serviceName == null
               ? pingDestination
               : pingDestination + '/$serviceName'
         }),
-        delay: delay,
-        attempts: attempts);
+        delay: delay);
 
     BluetoothBleStompClientFrame response;
     try {
