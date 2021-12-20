@@ -7,13 +7,13 @@ packages:
       name: async
       url: "https://pub.dartlang.org"
     source: hosted
-    version: "2.8.1"
+    version: "2.8.2"
   bluetooth_ble_stomp_client:
     dependency: "direct main"
     description:
       path: "."
       ref: main
-      resolved-ref: "5acb087b891fd92645f287b7af7eb226c32a4180"
+      resolved-ref: "529a2bede36440f77d4f7100eefe3d27d125e5d5"
       url: "https://github.com/elijahjpassmore/bluetooth_ble_stomp_client.git"
     source: git
     version: "0.0.1"
@@ -30,7 +30,7 @@ packages:
       name: characters
       url: "https://pub.dartlang.org"
     source: hosted
-    version: "1.1.0"
+    version: "1.2.0"
   charcode:
     dependency: transitive
     description:
@@ -138,7 +138,7 @@ packages:
       name: matcher
       url: "https://pub.dartlang.org"
     source: hosted
-    version: "0.12.10"
+    version: "0.12.11"
   meta:
     dependency: transitive
     description:
@@ -227,7 +227,7 @@ packages:
       name: test_api
       url: "https://pub.dartlang.org"
     source: hosted
-    version: "0.4.2"
+    version: "0.4.3"
   typed_data:
     dependency: transitive
     description:
@@ -241,7 +241,7 @@ packages:
       name: vector_math
       url: "https://pub.dartlang.org"
     source: hosted
-    version: "2.1.0"
+    version: "2.1.1"
 sdks:
-  dart: ">=2.12.0 <3.0.0"
+  dart: ">=2.14.0 <3.0.0"
   flutter: ">=2.0.0"

@@ -19,16 +19,22 @@ class SnBluetoothBleStompClient extends BluetoothBleStompClient {
   static const String pingDestination = '/setup/network/ping';
 
   SnBluetoothBleStompClient({
-    required QualifiedCharacteristic readCharacteristic,
-    required QualifiedCharacteristic writeCharacteristic,
+    required DiscoveredDevice device,
+    required Uuid serviceUuid,
+    required Uuid readCharacteristicUuid,
+    required Uuid writeCharacteristicUuid,
+    Function(ConnectionStateUpdate)? stateCallback,
     Duration? actionDelay = const Duration(milliseconds: 500),
     void Function(String)? logMessage,
     required this.login,
     required this.password,
     required this.host,
   }) : super(
-            writeCharacteristic: writeCharacteristic,
-            readCharacteristic: readCharacteristic,
+            device: device,
+            serviceUuid: serviceUuid,
+            readCharacteristicUuid: readCharacteristicUuid,
+            writeCharacteristicUuid: writeCharacteristicUuid,
+            stateCallback: stateCallback,
             logMessage: logMessage,
             actionDelay: actionDelay);
 
@@ -75,7 +81,7 @@ class SnBluetoothBleStompClient extends BluetoothBleStompClient {
     } on BluetoothBleStompClientResponseException {
       /// If a frame cannot be made of the response, then assume that the server
       /// is currently starting.
-      waiting = true;
+      /// TODO
       return;
     }
     waiting = false;
