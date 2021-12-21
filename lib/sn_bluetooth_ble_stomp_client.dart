@@ -5,6 +5,7 @@ import 'package:bluetooth_ble_stomp_client/bluetooth_ble_stomp_client_frame.dart
 import 'package:bluetooth_ble_stomp_client/bluetooth_ble_stomp_client_response_exception.dart';
 import 'package:flutter_reactive_ble/flutter_reactive_ble.dart';
 import 'package:sn_bluetooth_ble_stomp_client/frames/sn_bluetooth_ble_stomp_client_authenticate_frame.dart';
+import 'package:sn_bluetooth_ble_stomp_client/frames/sn_bluetooth_ble_stomp_client_frame.dart';
 import 'package:sn_bluetooth_ble_stomp_client/frames/sn_bluetooth_ble_stomp_client_send_frame.dart';
 import 'package:sn_bluetooth_ble_stomp_client/frames/sn_bluetooth_ble_stomp_client_subscribe_frame.dart';
 import 'package:sn_bluetooth_ble_stomp_client/sn_bluetooth_ble_stomp_client_frame_command.dart';
@@ -77,11 +78,12 @@ class SnBluetoothBleStompClient extends BluetoothBleStompClient {
     /// Evaluate the response.
     BluetoothBleStompClientFrame response;
     try {
-      response = BluetoothBleStompClientFrame.fromBytes(bytes: await read());
+      response = SnBluetoothBleStompClientFrame.fromBytes(bytes: await read());
     } on BluetoothBleStompClientResponseException {
-      /// If a frame cannot be made of the response, then assume that the server
-      /// is currently starting.
-      /// TODO
+      waiting = true;
+      return;
+    } catch (e) {
+      // TODO
       return;
     }
     waiting = false;
@@ -112,6 +114,9 @@ class SnBluetoothBleStompClient extends BluetoothBleStompClient {
     if (await nullRead() == true) {
       authenticated = true;
       await subscribe(destination: setupDestination);
+    } else {
+      // TODO
+      return;
     }
   }
 
@@ -141,12 +146,25 @@ class SnBluetoothBleStompClient extends BluetoothBleStompClient {
 
     BluetoothBleStompClientFrame response;
     try {
-      response = BluetoothBleStompClientFrame.fromBytes(bytes: await read());
+      response = SnBluetoothBleStompClientFrame.fromBytes(bytes: await read());
+
+      /// Check for not authenticated.
+      if (SnBluetoothBleStompClientFrame.isAuthenticatedError(
+          frame: response)) {
+        authenticated = false;
+        return null;
+      }
+
+      /// Evaluate response.
       if (response.headers['status']! ==
           SnBluetoothBleStompClientMessageStatus.ok.value) {
         return response.bodyReadable;
       }
+    } on BluetoothBleStompClientResponseException {
+      // TODO
+      return '';
     } catch (e) {
+      // TODO
       return null;
     }
   }
@@ -172,14 +190,27 @@ class SnBluetoothBleStompClient extends BluetoothBleStompClient {
 
     BluetoothBleStompClientFrame response;
     try {
-      response = BluetoothBleStompClientFrame.fromBytes(bytes: await read());
+      response = SnBluetoothBleStompClientFrame.fromBytes(bytes: await read());
+
+      /// Check for not authenticated.
+      if (SnBluetoothBleStompClientFrame.isAuthenticatedError(
+          frame: response)) {
+        authenticated = false;
+        return false;
+      }
+
+      /// Evaluate response.
       if ((response.headers['status']! ==
               SnBluetoothBleStompClientMessageStatus.ok.value) &&
           response.body != null &&
           response.body == '\u0000') {
         return true;
       }
+    } on BluetoothBleStompClientResponseException {
+      // TODO
+      return false;
     } catch (e) {
+      // TODO
       return false;
     }
 

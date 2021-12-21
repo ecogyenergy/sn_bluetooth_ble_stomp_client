@@ -57,3 +57,21 @@ extension SnBluetoothBleStompClientFrameCommandExtension
     }
   }
 }
+
+const Set<String> validSnBluetoothBleStompClientFrameCommandValues = {
+  'ABORT',
+  'ACK',
+  'BEGIN',
+  'COMMIT',
+  'CONNECT',
+  'CONNECTED',
+  'DISCONNECT',
+  'ERROR',
+  'MESSAGE',
+  'NACK',
+  'RECEIPT',
+  'SEND',
+  'SUBSCRIBE',
+  'STOMP',
+  'UNSUBSCRIBE'
+};
