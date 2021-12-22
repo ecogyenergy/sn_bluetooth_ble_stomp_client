@@ -3,6 +3,7 @@ library sn_bluetooth_ble_stomp_client;
 import 'package:bluetooth_ble_stomp_client/bluetooth_ble_stomp_client.dart';
 import 'package:bluetooth_ble_stomp_client/bluetooth_ble_stomp_client_frame.dart';
 import 'package:bluetooth_ble_stomp_client/bluetooth_ble_stomp_client_response_exception.dart';
+import 'package:bluetooth_ble_stomp_client/bluetooth_ble_stomp_client_stomp_status.dart';
 import 'package:flutter_reactive_ble/flutter_reactive_ble.dart';
 import 'package:sn_bluetooth_ble_stomp_client/frames/sn_bluetooth_ble_stomp_client_authenticate_frame.dart';
 import 'package:sn_bluetooth_ble_stomp_client/frames/sn_bluetooth_ble_stomp_client_send_frame.dart';
@@ -42,6 +43,10 @@ class SnBluetoothBleStompClient extends BluetoothBleStompClient {
             logMessage: logMessage,
             actionDelay: actionDelay);
 
+  @override
+  BluetoothBleStompClientStompStatus status =
+      BluetoothBleStompClientStompStatus.unauthenticated;
+
   final String login;
   final String password;
   final String host;
@@ -49,8 +54,6 @@ class SnBluetoothBleStompClient extends BluetoothBleStompClient {
   late String session;
   int _latestId = 0;
   int _latestRequestId = 0;
-
-  bool authenticated = false;
 
   /// Check for an authenticated error frame.
   static bool isAuthorizedError({required BluetoothBleStompClientFrame frame}) {
@@ -80,6 +83,8 @@ class SnBluetoothBleStompClient extends BluetoothBleStompClient {
 
   /// Connect to the the server.
   Future<bool> connect({String? acceptVersion = '1.2', Duration? delay}) async {
+    status = BluetoothBleStompClientStompStatus.unauthenticated;
+
     await send(
         command: SnBluetoothBleStompClientFrameCommand.connect.value,
         headers: {
@@ -104,7 +109,7 @@ class SnBluetoothBleStompClient extends BluetoothBleStompClient {
 
     /// Check if already connected and authenticated.
     if (response.headers['message'] == "Already connected.") {
-      authenticated = true;
+      status = BluetoothBleStompClientStompStatus.authenticated;
 
       /// All authenticated clients should be subscribed to the setup
       /// destination.
@@ -143,7 +148,7 @@ class SnBluetoothBleStompClient extends BluetoothBleStompClient {
     } on BluetoothBleStompClientResponseException {
       if (BluetoothBleStompClient.readResponseEquality(
           one: rawResponse, two: BluetoothBleStompClient.nullResponse)) {
-        authenticated = true;
+        status = BluetoothBleStompClientStompStatus.authenticated;
 
         /// All authenticated clients should be subscribed to the setup
         /// destination.
@@ -153,7 +158,6 @@ class SnBluetoothBleStompClient extends BluetoothBleStompClient {
       }
     }
 
-    authenticated = false;
     return false;
   }
 
@@ -190,7 +194,7 @@ class SnBluetoothBleStompClient extends BluetoothBleStompClient {
 
       /// Check for not authenticated.
       if (SnBluetoothBleStompClient.isAuthorizedError(frame: response)) {
-        authenticated = false;
+        status = BluetoothBleStompClientStompStatus.unauthenticated;
         throw SnBluetoothBleStompClientAuthorizationException();
       }
 
@@ -238,7 +242,7 @@ class SnBluetoothBleStompClient extends BluetoothBleStompClient {
 
       /// Check for not authenticated.
       if (SnBluetoothBleStompClient.isAuthorizedError(frame: response)) {
-        authenticated = false;
+        status = BluetoothBleStompClientStompStatus.unauthenticated;
         throw SnBluetoothBleStompClientAuthorizationException();
       }
 
