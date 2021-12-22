@@ -102,6 +102,7 @@ class SnBluetoothBleStompClient extends BluetoothBleStompClient {
     } on BluetoothBleStompClientResponseException {
       /// In the case of any bad response when connecting, assume that the
       /// server is waiting. Timeout should not be an issue for this operation.
+      status = BluetoothBleStompClientStompStatus.unauthenticated;
       throw SnBluetoothBleStompClientWaitingException();
     }
 
