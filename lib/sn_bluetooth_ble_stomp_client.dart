@@ -3,12 +3,17 @@ library sn_bluetooth_ble_stomp_client;
 import 'package:bluetooth_ble_stomp_client/bluetooth_ble_stomp_client.dart';
 import 'package:bluetooth_ble_stomp_client/bluetooth_ble_stomp_client_frame.dart';
 import 'package:bluetooth_ble_stomp_client/bluetooth_ble_stomp_client_response_exception.dart';
+import 'package:bluetooth_ble_stomp_client/bluetooth_ble_stomp_client_stomp_status.dart';
 import 'package:flutter_reactive_ble/flutter_reactive_ble.dart';
 import 'package:sn_bluetooth_ble_stomp_client/frames/sn_bluetooth_ble_stomp_client_authenticate_frame.dart';
 import 'package:sn_bluetooth_ble_stomp_client/frames/sn_bluetooth_ble_stomp_client_send_frame.dart';
 import 'package:sn_bluetooth_ble_stomp_client/frames/sn_bluetooth_ble_stomp_client_subscribe_frame.dart';
+import 'package:sn_bluetooth_ble_stomp_client/sn_bluetooth_ble_stomp_client_authorization_exception.dart';
 import 'package:sn_bluetooth_ble_stomp_client/sn_bluetooth_ble_stomp_client_frame_command.dart';
 import 'package:sn_bluetooth_ble_stomp_client/sn_bluetooth_ble_stomp_client_message_status.dart';
+import 'package:sn_bluetooth_ble_stomp_client/sn_bluetooth_ble_stomp_client_timeout_exception.dart';
+import 'package:sn_bluetooth_ble_stomp_client/sn_bluetooth_ble_stomp_client_unexpected_exception.dart';
+import 'package:sn_bluetooth_ble_stomp_client/sn_bluetooth_ble_stomp_client_waiting_exception.dart';
 
 /// A simple SolarNetwork specific BLE STOMP client that uses
 /// bluetooth_ble_stomp_client.
@@ -19,18 +24,28 @@ class SnBluetoothBleStompClient extends BluetoothBleStompClient {
   static const String pingDestination = '/setup/network/ping';
 
   SnBluetoothBleStompClient({
-    required QualifiedCharacteristic readCharacteristic,
-    required QualifiedCharacteristic writeCharacteristic,
+    required DiscoveredDevice device,
+    required Uuid serviceUuid,
+    required Uuid readCharacteristicUuid,
+    required Uuid writeCharacteristicUuid,
+    Function(ConnectionStateUpdate)? stateCallback,
     Duration? actionDelay = const Duration(milliseconds: 500),
     void Function(String)? logMessage,
     required this.login,
     required this.password,
     required this.host,
   }) : super(
-            writeCharacteristic: writeCharacteristic,
-            readCharacteristic: readCharacteristic,
+            device: device,
+            serviceUuid: serviceUuid,
+            readCharacteristicUuid: readCharacteristicUuid,
+            writeCharacteristicUuid: writeCharacteristicUuid,
+            stateCallback: stateCallback,
             logMessage: logMessage,
             actionDelay: actionDelay);
+
+  @override
+  BluetoothBleStompClientStompStatus status =
+      BluetoothBleStompClientStompStatus.unauthenticated;
 
   final String login;
   final String password;
@@ -40,8 +55,17 @@ class SnBluetoothBleStompClient extends BluetoothBleStompClient {
   int _latestId = 0;
   int _latestRequestId = 0;
 
-  bool authenticated = false;
-  bool waiting = false;
+  /// Check for an authenticated error frame.
+  static bool isAuthorizedError({required BluetoothBleStompClientFrame frame}) {
+    if (frame.command == SnBluetoothBleStompClientFrameCommand.error.value) {
+      if (frame.headers['message'] == 'Not authorized.' ||
+          frame.headers['message'] ==
+              'Must start with CONNECT or STOMP frame.') {
+        return true;
+      }
+    }
+    return false;
+  }
 
   /// Get the latest ID and increment it.
   String _getId() {
@@ -58,7 +82,7 @@ class SnBluetoothBleStompClient extends BluetoothBleStompClient {
   }
 
   /// Connect to the the server.
-  Future<void> connect({String? acceptVersion = '1.2', Duration? delay}) async {
+  Future<bool> connect({String? acceptVersion = '1.2', Duration? delay}) async {
     await send(
         command: SnBluetoothBleStompClientFrameCommand.connect.value,
         headers: {
@@ -69,44 +93,70 @@ class SnBluetoothBleStompClient extends BluetoothBleStompClient {
         delay: delay);
 
     /// Evaluate the response.
+    List<int> rawResponse = await read();
     BluetoothBleStompClientFrame response;
     try {
-      response = BluetoothBleStompClientFrame.fromBytes(bytes: await read());
+      response = BluetoothBleStompClientFrame.fromBytes(
+          bytes: rawResponse,
+          validCommands: validSnBluetoothBleStompClientFrameCommandValues);
     } on BluetoothBleStompClientResponseException {
-      /// If a frame cannot be made of the response, then assume that the server
-      /// is currently starting.
-      waiting = true;
-      return;
+      /// In the case of any bad response when connecting, assume that the
+      /// server is waiting. Timeout should not be an issue for this operation.
+      throw SnBluetoothBleStompClientWaitingException();
     }
-    waiting = false;
+
+    /// Check if already connected and authenticated.
+    if (response.headers['message'] == "Already connected.") {
+      status = BluetoothBleStompClientStompStatus.authenticated;
+
+      /// All authenticated clients should be subscribed to the setup
+      /// destination.
+      await subscribe(destination: SnBluetoothBleStompClient.setupDestination);
+      return true;
+    }
 
     /// If a CONNECTED command is sent back, then attempt to authenticate.
-    if (response.command ==
-        SnBluetoothBleStompClientFrameCommand.connected.value) {
+    String authHashParamSalt;
+    try {
       session = response.headers['session']!;
-
-      String authHashParamSalt = response.headers['auth-hash-param-salt']!;
-      await _authenticate(
-          salt: authHashParamSalt, date: DateTime.now().toUtc());
+      authHashParamSalt = response.headers['auth-hash-param-salt']!;
+    } catch (e) {
+      throw SnBluetoothBleStompClientUnexpectedException(frame: response);
     }
+
+    return await _authenticate(
+        salt: authHashParamSalt, date: DateTime.now().toUtc());
   }
 
   /// Authenticate to the server.
   ///
   /// NOTE: Only the BCrypt digest algorithm is supported.
-  Future<void> _authenticate(
+  Future<bool> _authenticate(
       {required String salt, required DateTime date, Duration? delay}) async {
     await sendFrame(
         frame: SnBluetoothBleStompClientAuthenticateFrame(
             password: password, salt: salt, login: login, date: date),
         delay: delay);
 
-    /// If the next read is a null, then assume that authentication was
-    /// successful.
-    if (await nullRead() == true) {
-      authenticated = true;
-      await subscribe(destination: setupDestination);
+    List<int> rawResponse = await read();
+    try {
+      BluetoothBleStompClientFrame.fromBytes(
+          bytes: rawResponse,
+          validCommands: validSnBluetoothBleStompClientFrameCommandValues);
+    } on BluetoothBleStompClientResponseException {
+      if (BluetoothBleStompClient.readResponseEquality(
+          one: rawResponse, two: BluetoothBleStompClient.nullResponse)) {
+        status = BluetoothBleStompClientStompStatus.authenticated;
+
+        /// All authenticated clients should be subscribed to the setup
+        /// destination.
+        await subscribe(
+            destination: SnBluetoothBleStompClient.setupDestination);
+        return true;
+      }
     }
+
+    return false;
   }
 
   /// Subscribe to a destination topic with the given id.
@@ -133,15 +183,32 @@ class SnBluetoothBleStompClient extends BluetoothBleStompClient {
         }),
         delay: delay);
 
+    List<int> rawResponse = await read();
     BluetoothBleStompClientFrame response;
     try {
-      response = BluetoothBleStompClientFrame.fromBytes(bytes: await read());
-      if (response.headers['status']! ==
+      response = BluetoothBleStompClientFrame.fromBytes(
+          bytes: rawResponse,
+          validCommands: validSnBluetoothBleStompClientFrameCommandValues);
+
+      /// Check for not authenticated.
+      if (SnBluetoothBleStompClient.isAuthorizedError(frame: response)) {
+        status = BluetoothBleStompClientStompStatus.unauthenticated;
+        throw SnBluetoothBleStompClientAuthorizationException();
+      }
+
+      /// Evaluate response.
+      if (response.headers['status'] ==
           SnBluetoothBleStompClientMessageStatus.ok.value) {
         return response.bodyReadable;
       }
-    } catch (e) {
-      return null;
+    } on BluetoothBleStompClientResponseException {
+      if (BluetoothBleStompClient.readResponseEquality(
+          one: rawResponse, two: BluetoothBleStompClient.warningResponse)) {
+        throw SnBluetoothBleStompClientWaitingException();
+      } else if (BluetoothBleStompClient.readResponseEquality(
+          one: rawResponse, two: BluetoothBleStompClient.nullResponse)) {
+        throw SnBluetoothBleStompClientTimeoutException();
+      }
     }
   }
 
@@ -164,19 +231,34 @@ class SnBluetoothBleStompClient extends BluetoothBleStompClient {
         }),
         delay: delay);
 
+    List<int> rawResponse = await read();
     BluetoothBleStompClientFrame response;
     try {
-      response = BluetoothBleStompClientFrame.fromBytes(bytes: await read());
+      response = BluetoothBleStompClientFrame.fromBytes(
+          bytes: rawResponse,
+          validCommands: validSnBluetoothBleStompClientFrameCommandValues);
+
+      /// Check for not authenticated.
+      if (SnBluetoothBleStompClient.isAuthorizedError(frame: response)) {
+        status = BluetoothBleStompClientStompStatus.unauthenticated;
+        throw SnBluetoothBleStompClientAuthorizationException();
+      }
+
+      /// Evaluate response.
       if ((response.headers['status']! ==
               SnBluetoothBleStompClientMessageStatus.ok.value) &&
           response.body != null &&
           response.body == '\u0000') {
         return true;
       }
-    } catch (e) {
-      return false;
+    } on BluetoothBleStompClientResponseException {
+      if (BluetoothBleStompClient.readResponseEquality(
+          one: rawResponse, two: BluetoothBleStompClient.warningResponse)) {
+        throw SnBluetoothBleStompClientWaitingException();
+      } else if (BluetoothBleStompClient.readResponseEquality(
+          one: rawResponse, two: BluetoothBleStompClient.nullResponse)) {
+        throw SnBluetoothBleStompClientTimeoutException();
+      }
     }
-
-    return false;
   }
 }
