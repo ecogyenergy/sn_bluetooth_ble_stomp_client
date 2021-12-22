@@ -83,8 +83,6 @@ class SnBluetoothBleStompClient extends BluetoothBleStompClient {
 
   /// Connect to the the server.
   Future<bool> connect({String? acceptVersion = '1.2', Duration? delay}) async {
-    status = BluetoothBleStompClientStompStatus.unauthenticated;
-
     await send(
         command: SnBluetoothBleStompClientFrameCommand.connect.value,
         headers: {
