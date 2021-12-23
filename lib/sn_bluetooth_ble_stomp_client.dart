@@ -29,8 +29,10 @@ class SnBluetoothBleStompClient extends BluetoothBleStompClient {
     required Uuid readCharacteristicUuid,
     required Uuid writeCharacteristicUuid,
     Function(ConnectionStateUpdate)? stateCallback,
-    Duration? actionDelay = const Duration(milliseconds: 500),
+    Duration? actionDelay = const Duration(milliseconds: 700),
     void Function(String)? logMessage,
+    BluetoothBleStompClientStompStatus status =
+        BluetoothBleStompClientStompStatus.authenticated,
     required this.login,
     required this.password,
     required this.host,
@@ -41,11 +43,8 @@ class SnBluetoothBleStompClient extends BluetoothBleStompClient {
             writeCharacteristicUuid: writeCharacteristicUuid,
             stateCallback: stateCallback,
             logMessage: logMessage,
+            status: status,
             actionDelay: actionDelay);
-
-  @override
-  BluetoothBleStompClientStompStatus status =
-      BluetoothBleStompClientStompStatus.unauthenticated;
 
   final String login;
   final String password;
@@ -102,17 +101,14 @@ class SnBluetoothBleStompClient extends BluetoothBleStompClient {
     } on BluetoothBleStompClientResponseException {
       /// In the case of any bad response when connecting, assume that the
       /// server is waiting. Timeout should not be an issue for this operation.
+      status = BluetoothBleStompClientStompStatus.unauthenticated;
       throw SnBluetoothBleStompClientWaitingException();
     }
 
     /// Check if already connected and authenticated.
     if (response.headers['message'] == "Already connected.") {
-      status = BluetoothBleStompClientStompStatus.authenticated;
-
-      /// All authenticated clients should be subscribed to the setup
-      /// destination.
-      await subscribe(destination: SnBluetoothBleStompClient.setupDestination);
-      return true;
+      status = BluetoothBleStompClientStompStatus.unauthenticated;
+      return false;
     }
 
     /// If a CONNECTED command is sent back, then attempt to authenticate.
@@ -156,6 +152,7 @@ class SnBluetoothBleStompClient extends BluetoothBleStompClient {
       }
     }
 
+    status = BluetoothBleStompClientStompStatus.unauthenticated;
     return false;
   }
 
@@ -184,9 +181,8 @@ class SnBluetoothBleStompClient extends BluetoothBleStompClient {
         delay: delay);
 
     List<int> rawResponse = await read();
-    BluetoothBleStompClientFrame response;
     try {
-      response = BluetoothBleStompClientFrame.fromBytes(
+      BluetoothBleStompClientFrame response = BluetoothBleStompClientFrame.fromBytes(
           bytes: rawResponse,
           validCommands: validSnBluetoothBleStompClientFrameCommandValues);
 
@@ -204,6 +200,7 @@ class SnBluetoothBleStompClient extends BluetoothBleStompClient {
     } on BluetoothBleStompClientResponseException {
       if (BluetoothBleStompClient.readResponseEquality(
           one: rawResponse, two: BluetoothBleStompClient.warningResponse)) {
+        status = BluetoothBleStompClientStompStatus.unauthenticated;
         throw SnBluetoothBleStompClientWaitingException();
       } else if (BluetoothBleStompClient.readResponseEquality(
           one: rawResponse, two: BluetoothBleStompClient.nullResponse)) {
@@ -232,9 +229,8 @@ class SnBluetoothBleStompClient extends BluetoothBleStompClient {
         delay: delay);
 
     List<int> rawResponse = await read();
-    BluetoothBleStompClientFrame response;
     try {
-      response = BluetoothBleStompClientFrame.fromBytes(
+      BluetoothBleStompClientFrame response = BluetoothBleStompClientFrame.fromBytes(
           bytes: rawResponse,
           validCommands: validSnBluetoothBleStompClientFrameCommandValues);
 
@@ -254,6 +250,7 @@ class SnBluetoothBleStompClient extends BluetoothBleStompClient {
     } on BluetoothBleStompClientResponseException {
       if (BluetoothBleStompClient.readResponseEquality(
           one: rawResponse, two: BluetoothBleStompClient.warningResponse)) {
+        status = BluetoothBleStompClientStompStatus.unauthenticated;
         throw SnBluetoothBleStompClientWaitingException();
       } else if (BluetoothBleStompClient.readResponseEquality(
           one: rawResponse, two: BluetoothBleStompClient.nullResponse)) {
