@@ -108,11 +108,7 @@ class SnBluetoothBleStompClient extends BluetoothBleStompClient {
     /// Check if already connected and authenticated.
     if (response.headers['message'] == "Already connected.") {
       status = BluetoothBleStompClientStompStatus.unauthenticated;
-
-      /// All authenticated clients should be subscribed to the setup
-      /// destination.
-      await subscribe(destination: SnBluetoothBleStompClient.setupDestination);
-      return true;
+      return false;
     }
 
     /// If a CONNECTED command is sent back, then attempt to authenticate.
