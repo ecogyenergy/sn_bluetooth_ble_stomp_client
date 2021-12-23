@@ -29,7 +29,7 @@ class SnBluetoothBleStompClient extends BluetoothBleStompClient {
     required Uuid readCharacteristicUuid,
     required Uuid writeCharacteristicUuid,
     Function(ConnectionStateUpdate)? stateCallback,
-    Duration? actionDelay = const Duration(milliseconds: 500),
+    Duration? actionDelay = const Duration(milliseconds: 700),
     void Function(String)? logMessage,
     BluetoothBleStompClientStompStatus status =
         BluetoothBleStompClientStompStatus.authenticated,
@@ -181,9 +181,8 @@ class SnBluetoothBleStompClient extends BluetoothBleStompClient {
         delay: delay);
 
     List<int> rawResponse = await read();
-    BluetoothBleStompClientFrame response;
     try {
-      response = BluetoothBleStompClientFrame.fromBytes(
+      BluetoothBleStompClientFrame response = BluetoothBleStompClientFrame.fromBytes(
           bytes: rawResponse,
           validCommands: validSnBluetoothBleStompClientFrameCommandValues);
 
@@ -230,9 +229,8 @@ class SnBluetoothBleStompClient extends BluetoothBleStompClient {
         delay: delay);
 
     List<int> rawResponse = await read();
-    BluetoothBleStompClientFrame response;
     try {
-      response = BluetoothBleStompClientFrame.fromBytes(
+      BluetoothBleStompClientFrame response = BluetoothBleStompClientFrame.fromBytes(
           bytes: rawResponse,
           validCommands: validSnBluetoothBleStompClientFrameCommandValues);
 
